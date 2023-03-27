@@ -7,5 +7,6 @@ int main(int argc, char **argv){
             printf("0\n");
         }
     }
+    printf("%s","TEST");
     return 0;
 }
