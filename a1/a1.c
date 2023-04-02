@@ -9,6 +9,24 @@
 #include <string.h>
 
 #define MAX_PATH_LEN 256
+#define MAGIC "JUoc"
+#define MIN_VERSION 82
+#define MAX_VERSION 172
+#define MIN_SECTIONS 8
+#define MAX_SECTIONS 10
+#define VALID_SECTION_TYPES_SIZE 7
+#define VALID_SECTION_TYPES        \
+    {                              \
+        72, 56, 64, 40, 37, 48, 41 \
+    }
+
+typedef struct
+{
+    char name[7];
+    int type;
+    int offset;
+    int size;
+} section_t;
 
 int string_ends_with(const char *str, const char *suffix)
 {
@@ -192,7 +210,7 @@ void list_directory_filtered_perm(char *dirName, char *filter)
     free(path);
     closedir(dir);
 }
-void list_directory_rec(char *dirName, int *dirPrinted)
+void list_directory_rec(char *dirName, char *prefix)
 {
     DIR *dir;
     struct dirent *dirEntry;
@@ -203,33 +221,32 @@ void list_directory_rec(char *dirName, int *dirPrinted)
         printf("%s", "ERROR\nerror opening directory\n");
         exit(4);
     }
-    if (!(*dirPrinted))
-    {
-        printf("%s\n", dirName);
-        *dirPrinted = 1;
-    }
+
     // iterate the directory contents
     while ((dirEntry = readdir(dir)) != 0)
     {
         // build the complete path to the element in the directory
         if (strcmp(dirEntry->d_name, ".") != 0 && strcmp(dirEntry->d_name, "..") != 0)
         {
-            strcat(path, dirName);
+            strcpy(path, dirName);
             strcat(path, "/");
             strcat(path, dirEntry->d_name);
+            printf("%s\n", path);
             if (check_directory(path) == 1)
             {
-                list_directory_rec(path, dirPrinted);
+                char *new_prefix = malloc(MAX_PATH_LEN * sizeof(char));
+                strcpy(new_prefix, prefix);
+                strcat(new_prefix, dirEntry->d_name);
+                strcat(new_prefix, "/");
+                list_directory_rec(path, new_prefix);
+                free(new_prefix);
             }
-            printf("%s/%s", dirName, dirEntry->d_name);
-            printf("\n");
         }
     }
-
     free(path);
     closedir(dir);
 }
-void list_directory_rec_filtered_name(char *dirName, int *dirPrinted, char *filter)
+void list_directory_rec_filtered_name(char *dirName, char *prefix, char *filter)
 {
     DIR *dir;
     struct dirent *dirEntry;
@@ -240,37 +257,33 @@ void list_directory_rec_filtered_name(char *dirName, int *dirPrinted, char *filt
         printf("%s", "ERROR\nerror opening directory\n");
         exit(4);
     }
-    if (!(*dirPrinted) && string_ends_with(dirName, filter))
-    {
-        printf("%s\n", dirName);
-        *dirPrinted = 1;
-    }
+
     // iterate the directory contents
     while ((dirEntry = readdir(dir)) != 0)
     {
         // build the complete path to the element in the directory
         if (strcmp(dirEntry->d_name, ".") != 0 && strcmp(dirEntry->d_name, "..") != 0)
         {
-            strcat(path, dirName);
+            strcpy(path, dirName);
             strcat(path, "/");
             strcat(path, dirEntry->d_name);
+            if (string_ends_with(path, filter))
+                printf("%s\n", path);
             if (check_directory(path) == 1)
             {
-                *dirPrinted = 1;
-                list_directory_rec_filtered_name(path, dirPrinted, filter);
-            }
-            if (string_ends_with(dirEntry->d_name, filter))
-            {
-                printf("%s/%s", dirName, dirEntry->d_name);
-                printf("\n");
+                char *new_prefix = malloc(MAX_PATH_LEN * sizeof(char));
+                strcpy(new_prefix, prefix);
+                strcat(new_prefix, dirEntry->d_name);
+                strcat(new_prefix, "/");
+                list_directory_rec_filtered_name(path, new_prefix, filter);
+                free(new_prefix);
             }
         }
     }
-
     free(path);
     closedir(dir);
 }
-void list_directory_rec_filtered_perm(char *dirName, int *dirPrinted, char *filter)
+void list_directory_rec_filtered_perm(char *dirName, char *prefix, char *filter)
 {
     DIR *dir;
     struct dirent *dirEntry;
@@ -294,12 +307,6 @@ void list_directory_rec_filtered_perm(char *dirName, int *dirPrinted, char *filt
             strcpy(path, dirName);
             strcat(path, "/");
             strcat(path, dirEntry->d_name);
-            if (check_directory(path) == 1)
-            {
-                *dirPrinted = 1;
-                list_directory_rec_filtered_perm(path, dirPrinted, filter);
-            }
-            // printf("%s\n",path);
 
             if (stat(path, &fileMetadata) < 0)
             { // get info about a file system element (file, directory etc.)
@@ -354,18 +361,20 @@ void list_directory_rec_filtered_perm(char *dirName, int *dirPrinted, char *filt
                 {
                     strcat(permision, "-");
                 }
-                if (!(*dirPrinted) && strcmp(permision, filter) == 0)
-                {
-                    printf("%s\n", dirName);
-                    *dirPrinted = 1;
-                }
-
-                if (strcmp(permision, filter) == 0)
-                {
-                    printf("%s/%s", dirName, dirEntry->d_name);
-                    printf("\n");
-                }
-                strcpy(permision, "");
+            }
+            if (strcmp(permision, filter) == 0)
+            {
+                printf("%s\n", path);
+            }
+            strcpy(permision, "");
+            if (check_directory(path) == 1)
+            {
+                char *new_prefix = malloc(MAX_PATH_LEN * sizeof(char));
+                strcpy(new_prefix, prefix);
+                strcat(new_prefix, dirEntry->d_name);
+                strcat(new_prefix, "/");
+                list_directory_rec_filtered_name(path, new_prefix, filter);
+                free(new_prefix);
             }
         }
     }
@@ -373,6 +382,81 @@ void list_directory_rec_filtered_perm(char *dirName, int *dirPrinted, char *filt
     free(permision);
     free(path);
     closedir(dir);
+}
+int is_valid_section_type(int section_type)
+{
+    int valid_section_types[] = VALID_SECTION_TYPES;
+    int i;
+    for (i = 0; i < VALID_SECTION_TYPES_SIZE; i++)
+    {
+        if (section_type == valid_section_types[i])
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+void parse_sf_file(char *file_path)
+{
+    int fd, i;
+    char magic[5];
+    int version, sections_nr, header_size;
+    section_t sections[MAX_SECTIONS];
+
+    fd = open(file_path, O_RDONLY);
+    if (fd == -1)
+    {
+        printf("ERROR\nFailed to open file: %s\n", file_path);
+        return;
+    }
+
+    read(fd, magic, 4);
+    magic[4] = '\0';
+    if (strcmp(magic, MAGIC) != 0)
+    {
+        printf("ERROR\nwrong magic\n");
+        close(fd);
+        return;
+    }
+    read(fd, &header_size, 2);
+    read(fd, &version, 1);
+    if (!(version >= MIN_VERSION && version <= MAX_VERSION))
+    {
+        printf("ERROR\nwrong version\n");
+        close(fd);
+        return;
+    }
+
+    read(fd, &sections_nr, 1);
+    if (!(sections_nr >= MIN_SECTIONS && sections_nr <= MAX_SECTIONS))
+    {
+        printf("ERROR\nwrong section numberr\n");
+        close(fd);
+        return;
+    }
+    for (i = 0; i < sections_nr; i++)
+    {
+        read(fd, sections[i].name, 7);
+        sections[i].name[7] = '\0';
+        read(fd, &sections[i].type, 1);
+        read(fd, &sections[i].offset, 4);
+        read(fd, &sections[i].size, 4);
+        if (!is_valid_section_type(sections[i].type))
+        {
+            printf("ERROR\nwrong section types\n");
+            close(fd);
+            return;
+        }
+    }
+    close(fd);
+
+    printf("SUCCESS\n");
+    printf("version=%d\n", version);
+    printf("nr_sections=%d\n", sections_nr);
+    for (i = 0; i < sections_nr; i++)
+    {
+        printf("section%d: %s %d %d\n", i + 1, sections[i].name, sections[i].type, sections[i].size);
+    }
 }
 
 int main(int argc, char **argv)
@@ -385,7 +469,6 @@ int main(int argc, char **argv)
         }
         else if (strcmp(argv[1], "list") == 0)
         {
-            int dirPrinted = 0;
             char *path = malloc(MAX_PATH_LEN * sizeof(char));
             char *op_name = malloc(MAX_PATH_LEN * sizeof(char));
             char *op_perm = malloc(MAX_PATH_LEN * sizeof(char));
@@ -400,8 +483,9 @@ int main(int argc, char **argv)
                             strncpy(path, argv[3] + 5, strlen(argv[3]));
                             if (check_path(path) == 1)
                             {
+                                char *prefix = "";
                                 printf("%s", "SUCCESS\n");
-                                list_directory_rec(path, &dirPrinted);
+                                list_directory_rec(path, prefix);
                             }
                         }
                         else
@@ -415,13 +499,15 @@ int main(int argc, char **argv)
                                     printf("%s", "SUCCESS\n");
                                     if (strstr(argv[4], "name_ends_with") != NULL) // name_ends_with filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_name, argv[4] + 15, strlen(argv[4]));
-                                        list_directory_rec_filtered_name(path, &dirPrinted, op_name);
+                                        list_directory_rec_filtered_name(path, prefix, op_name);
                                     }
                                     else // permissions filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_perm, argv[4] + 12, strlen(argv[4]));
-                                        list_directory_rec_filtered_perm(path, &dirPrinted, op_perm);
+                                        list_directory_rec_filtered_perm(path, prefix, op_perm);
                                     }
                                 }
                             }
@@ -433,13 +519,15 @@ int main(int argc, char **argv)
                                     printf("%s", "SUCCESS\n");
                                     if (strstr(argv[3], "name_ends_with") != NULL) // name_ends_with filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_name, argv[3] + 15, strlen(argv[3]));
-                                        list_directory_rec_filtered_name(path, &dirPrinted, op_name);
+                                        list_directory_rec_filtered_name(path, prefix, op_name);
                                     }
                                     else // permissions filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_perm, argv[3] + 12, strlen(argv[3]));
-                                        list_directory_rec_filtered_perm(path, &dirPrinted, op_perm);
+                                        list_directory_rec_filtered_perm(path, prefix, op_perm);
                                     }
                                 }
                             }
@@ -459,8 +547,9 @@ int main(int argc, char **argv)
                             strncpy(path, argv[2] + 5, strlen(argv[2]));
                             if (check_path(path) == 1)
                             {
+                                char *prefix = "";
                                 printf("%s", "SUCCESS\n");
-                                list_directory_rec(path, &dirPrinted);
+                                list_directory_rec(path, prefix);
                             }
                         }
 
@@ -475,13 +564,15 @@ int main(int argc, char **argv)
                                     printf("%s", "SUCCESS\n");
                                     if (strstr(argv[3], "name_ends_with") != NULL) // name_ends_with filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_name, argv[3] + 15, strlen(argv[3]));
-                                        list_directory_rec_filtered_name(path, &dirPrinted, op_name);
+                                        list_directory_rec_filtered_name(path, prefix, op_name);
                                     }
                                     else // permissions filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_perm, argv[3] + 12, strlen(argv[3]));
-                                        list_directory_rec_filtered_perm(path, &dirPrinted, op_perm);
+                                        list_directory_rec_filtered_perm(path, prefix, op_perm);
                                     }
                                 }
                             }
@@ -493,13 +584,15 @@ int main(int argc, char **argv)
                                     printf("%s", "SUCCESS\n");
                                     if (strstr(argv[2], "name_ends_with") != NULL) // name_ends_with filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_name, argv[2] + 15, strlen(argv[2]));
-                                        list_directory_rec_filtered_name(path, &dirPrinted, op_name);
+                                        list_directory_rec_filtered_name(path, prefix, op_name);
                                     }
                                     else // permissions filter
                                     {
+                                        char *prefix = "";
                                         strncpy(op_perm, argv[2] + 12, strlen(argv[2]));
-                                        list_directory_rec_filtered_perm(path, &dirPrinted, op_perm);
+                                        list_directory_rec_filtered_perm(path, prefix, op_perm);
                                     }
                                 }
                             }
@@ -573,28 +666,18 @@ int main(int argc, char **argv)
         }
         else if (strcmp(argv[1], "parse") == 0 || strcmp(argv[2], "parse") == 0)
         {
-            int fd;
-            char buffer[100];
             char *path = malloc(MAX_PATH_LEN * sizeof(char));
+
             if (strcmp(argv[1], "parse") == 0)
-                strncpy(path, argv[2] + 5, strlen(argv[2]));
-
-            else if (strcmp(argv[2], "parse") == 0)
-                strncpy(path, argv[1] + 5, strlen(argv[1]));
-
-            fd=open(path,O_RDONLY);
-            if(fd<0)
-            printf("ERROR\nCould not open file\n");
-
-            if(read(fd,buffer,4)<0)
-            printf("ERROR\nCould not read file\n");
-
-            for (int i = 0; i <4; i++)
             {
-                printf("%c",buffer[i]);
+                strncpy(path, argv[2] + 5, strlen(argv[2]));
             }
-
-                free(path);
+            else if (strcmp(argv[2], "parse") == 0)
+            {
+                strncpy(path, argv[1] + 5, strlen(argv[1]));
+            }
+            parse_sf_file(path);
+            free(path);
         }
     }
     return 0;
