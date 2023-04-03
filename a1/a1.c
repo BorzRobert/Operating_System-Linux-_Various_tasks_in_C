@@ -15,18 +15,23 @@
 #define MIN_SECTIONS 8
 #define MAX_SECTIONS 10
 #define VALID_SECTION_TYPES_SIZE 7
-#define VALID_SECTION_TYPES        \
-    {                              \
-        72, 56, 64, 40, 37, 48, 41 \
-    }
 
 typedef struct
 {
-    char name[7];
-    int type;
-    int offset;
-    int size;
-} section_t;
+    char sect_name[8];
+    unsigned char sect_type;
+    int sect_offset;
+    int sect_size;
+} section_header;
+
+typedef struct
+{
+    char magic[4];
+    short header_size;
+    unsigned char version;
+    unsigned char number_of_sections;
+    section_header *section_headers;
+} header;
 
 int string_ends_with(const char *str, const char *suffix)
 {
@@ -385,7 +390,7 @@ void list_directory_rec_filtered_perm(char *dirName, char *prefix, char *filter)
 }
 int is_valid_section_type(int section_type)
 {
-    int valid_section_types[] = VALID_SECTION_TYPES;
+    int valid_section_types[7] = {72, 56, 64, 40, 37, 48, 41};
     int i;
     for (i = 0; i < VALID_SECTION_TYPES_SIZE; i++)
     {
@@ -398,65 +403,130 @@ int is_valid_section_type(int section_type)
 }
 void parse_sf_file(char *file_path)
 {
-    int fd, i;
-    char magic[5];
-    int version, sections_nr, header_size;
-    section_t sections[MAX_SECTIONS];
-
+    int fd, i, bytesRead;
+    header *file_header = malloc(sizeof(header));
     fd = open(file_path, O_RDONLY);
-    if (fd == -1)
+    if (fd < 0)
     {
-        printf("ERROR\nFailed to open file: %s\n", file_path);
+        printf("ERROR\nCouldn't open file\n");
+        free(file_header);
         return;
     }
-
-    read(fd, magic, 4);
-    magic[4] = '\0';
-    if (strcmp(magic, MAGIC) != 0)
+    // READ magic
+    bytesRead = read(fd, &file_header->magic, sizeof(file_header->magic));
+    if (bytesRead < 0)
     {
-        printf("ERROR\nwrong magic\n");
-        close(fd);
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
         return;
     }
-    read(fd, &header_size, 2);
-    read(fd, &version, 1);
-    if (!(version >= MIN_VERSION && version <= MAX_VERSION))
+    else
     {
-        printf("ERROR\nwrong version\n");
-        close(fd);
-        return;
-    }
-
-    read(fd, &sections_nr, 1);
-    if (!(sections_nr >= MIN_SECTIONS && sections_nr <= MAX_SECTIONS))
-    {
-        printf("ERROR\nwrong section numberr\n");
-        close(fd);
-        return;
-    }
-    for (i = 0; i < sections_nr; i++)
-    {
-        read(fd, sections[i].name, 7);
-        sections[i].name[7] = '\0';
-        read(fd, &sections[i].type, 1);
-        read(fd, &sections[i].offset, 4);
-        read(fd, &sections[i].size, 4);
-        if (!is_valid_section_type(sections[i].type))
+        if (strcmp(file_header->magic, "JUoc") != 0)
         {
-            printf("ERROR\nwrong section types\n");
-            close(fd);
+            printf("ERROR\nwrong magic\n");
+            free(file_header);
             return;
         }
     }
-    close(fd);
-
-    printf("SUCCESS\n");
-    printf("version=%d\n", version);
-    printf("nr_sections=%d\n", sections_nr);
-    for (i = 0; i < sections_nr; i++)
+    // READ header_size
+    bytesRead = read(fd, &file_header->header_size, sizeof(file_header->header_size));
+    if (bytesRead < 0)
     {
-        printf("section%d: %s %d %d\n", i + 1, sections[i].name, sections[i].type, sections[i].size);
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
+        return;
     }
+    // READ version
+    bytesRead = read(fd, &file_header->version, sizeof(file_header->version));
+    if (bytesRead < 0)
+    {
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
+        return;
+    }
+    else
+    {
+        if (file_header->version < 82 || file_header->version > 172)
+        {
+            printf("ERROR\nwrong version\n");
+            free(file_header);
+            return;
+        }
+    }
+    // READ number_of_sections
+    bytesRead = read(fd, &file_header->number_of_sections, sizeof(file_header->number_of_sections));
+    if (bytesRead < 0)
+    {
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
+        return;
+    }
+    else
+    {
+        if (!(file_header->number_of_sections >= 8 && file_header->number_of_sections <= 10))
+        {
+            printf("ERROR\nwrong sect_nr\n");
+            free(file_header);
+            return;
+        }
+    }
+    // READ sections headers
+    file_header->section_headers = malloc(file_header->number_of_sections * sizeof(section_header));
+    for (i = 0; i < file_header->number_of_sections; i++)
+    {
+        // READ sect_name
+        bytesRead = read(fd, &file_header->section_headers[i].sect_name, 7);
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header);
+            return;
+        }
+        // READ sect_type
+        bytesRead = read(fd, &file_header->section_headers[i].sect_type, sizeof(file_header->section_headers->sect_type));
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header);
+            return;
+        }
+        else
+        {
+            if (is_valid_section_type(file_header->section_headers[i].sect_type) != 1)
+            {
+                printf("ERROR\nwrong sect_types\n");
+                free(file_header);
+                return;
+            }
+        }
+        // READ sect_offset
+        bytesRead = read(fd, &file_header->section_headers[i].sect_offset, sizeof(file_header->section_headers->sect_offset));
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header);
+            return;
+        }
+        //printf("%i\n",file_header->section_headers[i].sect_offset);//REMOVE AFTER BEING DONE
+        // READ sect_size
+        bytesRead = read(fd, &file_header->section_headers[i].sect_size, sizeof(file_header->section_headers->sect_size));
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header);
+            return;
+        }
+    }
+    printf("SUCCESS\n");
+    printf("version=%i\n", file_header->version);
+    printf("nr_sections=%i\n", file_header->number_of_sections);
+    for (int i = 0; i < file_header->number_of_sections; i++)
+    {
+        printf("section%i: %s %i %i", i + 1, file_header->section_headers[i].sect_name, file_header->section_headers[i].sect_type, file_header->section_headers[i].sect_size);
+        printf("\n");
+    }
+    free(file_header);
 }
 
 int main(int argc, char **argv)
