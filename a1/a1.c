@@ -719,7 +719,7 @@ int check_SF_15(char *file_path)
     }
     else
     {
-        if (strcmp(file_header->magic, "JUoc") != 0)
+        if (file_header->magic[0] != 'J' && file_header->magic[1] != 'U' && file_header->magic[2] != 'o' && file_header->magic[3] != 'c')
         {
             close(fd);
             free(file_header);
@@ -848,7 +848,7 @@ int check_SF_15(char *file_path)
             nr_lines++;
             token = strtok(NULL, s);
         }
-        if (nr_lines > 15)
+        if (nr_lines >= 15)
         {
             free(file_header->section_headers);
             free(file_header);
@@ -884,7 +884,6 @@ void list_directory_rec_SF(char *dirName, char *prefix)
             strcpy(path, dirName);
             strcat(path, "/");
             strcat(path, dirEntry->d_name);
-
             if (check_directory(path) == 1)
             {
                 char *new_prefix = malloc(MAX_PATH_LEN * sizeof(char));
@@ -896,8 +895,10 @@ void list_directory_rec_SF(char *dirName, char *prefix)
             }
             else
             {
-                if(check_SF_15(path))
-                printf("%s\n", path);
+                if (check_SF_15(path) == 1)
+                {
+                    printf("%s\n", path);
+                }
             }
         }
     }
@@ -1149,7 +1150,6 @@ int main(int argc, char **argv)
             char *prefix = "";
             printf("%s", "SUCCESS\n");
             list_directory_rec_SF(path, prefix);
-    
 
             free(path);
         }
