@@ -9,11 +9,6 @@
 #include <string.h>
 
 #define MAX_PATH_LEN 256
-#define MAGIC "JUoc"
-#define MIN_VERSION 82
-#define MAX_VERSION 172
-#define MIN_SECTIONS 8
-#define MAX_SECTIONS 10
 #define VALID_SECTION_TYPES_SIZE 7
 
 typedef struct
@@ -47,12 +42,12 @@ int check_path(char *dirName)
     // Check if realy a directory
     struct stat fileMetadata;
     if (stat(dirName, &fileMetadata) < 0)
-    { // get info
+    {
         printf("%s", "ERROR\ngetting info about the file\n");
         return -1;
     }
     if (!S_ISDIR(fileMetadata.st_mode))
-    { // it is a directory
+    {
         printf("%s", "ERROR\nnot a directory\n");
         return -1;
     }
@@ -60,7 +55,6 @@ int check_path(char *dirName)
 }
 int check_directory(char *dirName)
 {
-    // Check if realy a directory
     struct stat fileMetadata;
 
     if (stat(dirName, &fileMetadata) < 0)
@@ -454,8 +448,10 @@ void parse_sf_file(char *file_path)
             return;
         }
     }
+
     // READ number_of_sections
     bytesRead = read(fd, &file_header->number_of_sections, sizeof(file_header->number_of_sections));
+
     if (bytesRead < 0)
     {
         printf("ERROR\nCouldn't read from the file\n");
@@ -473,6 +469,7 @@ void parse_sf_file(char *file_path)
     }
     // READ sections headers
     file_header->section_headers = malloc(file_header->number_of_sections * sizeof(section_header));
+
     for (i = 0; i < file_header->number_of_sections; i++)
     {
         // READ sect_name
@@ -480,6 +477,7 @@ void parse_sf_file(char *file_path)
         if (bytesRead < 0)
         {
             printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
             free(file_header);
             return;
         }
@@ -488,6 +486,7 @@ void parse_sf_file(char *file_path)
         if (bytesRead < 0)
         {
             printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
             free(file_header);
             return;
         }
@@ -496,6 +495,7 @@ void parse_sf_file(char *file_path)
             if (is_valid_section_type(file_header->section_headers[i].sect_type) != 1)
             {
                 printf("ERROR\nwrong sect_types\n");
+                free(file_header->section_headers);
                 free(file_header);
                 return;
             }
@@ -505,15 +505,16 @@ void parse_sf_file(char *file_path)
         if (bytesRead < 0)
         {
             printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
             free(file_header);
             return;
         }
-        //printf("%i\n",file_header->section_headers[i].sect_offset);//REMOVE AFTER BEING DONE
         // READ sect_size
         bytesRead = read(fd, &file_header->section_headers[i].sect_size, sizeof(file_header->section_headers->sect_size));
         if (bytesRead < 0)
         {
             printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
             free(file_header);
             return;
         }
@@ -526,7 +527,382 @@ void parse_sf_file(char *file_path)
         printf("section%i: %s %i %i", i + 1, file_header->section_headers[i].sect_name, file_header->section_headers[i].sect_type, file_header->section_headers[i].sect_size);
         printf("\n");
     }
+
+    free(file_header->section_headers);
     free(file_header);
+}
+void extract(char *file_path, int sect_nr, int line_nr)
+{
+    int fd, i, bytesRead;
+    header *file_header = malloc(sizeof(header));
+    fd = open(file_path, O_RDONLY);
+    if (fd < 0)
+    {
+        printf("ERROR\nCouldn't open file\n");
+        free(file_header);
+        return;
+    }
+    // READ magic
+    bytesRead = read(fd, &file_header->magic, sizeof(file_header->magic));
+    if (bytesRead < 0)
+    {
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
+        return;
+    }
+    else
+    {
+        if (strcmp(file_header->magic, "JUoc") != 0)
+        {
+            printf("ERROR\ninvalid file\n");
+            free(file_header);
+            return;
+        }
+    }
+    // READ header_size
+    bytesRead = read(fd, &file_header->header_size, sizeof(file_header->header_size));
+    if (bytesRead < 0)
+    {
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
+        return;
+    }
+    // READ version
+    bytesRead = read(fd, &file_header->version, sizeof(file_header->version));
+    if (bytesRead < 0)
+    {
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
+        return;
+    }
+    else
+    {
+        if (file_header->version < 82 || file_header->version > 172)
+        {
+            printf("ERROR\ninvalid file\n");
+            free(file_header);
+            return;
+        }
+    }
+    // READ number_of_sections
+    bytesRead = read(fd, &file_header->number_of_sections, sizeof(file_header->number_of_sections));
+    if (bytesRead < 0)
+    {
+        printf("ERROR\nCouldn't read from the file\n");
+        free(file_header);
+        return;
+    }
+    else
+    {
+        if (!(file_header->number_of_sections >= 8 && file_header->number_of_sections <= 10))
+        {
+            printf("ERROR\ninvalid file\n");
+            free(file_header);
+            return;
+        }
+    }
+
+    // READ sections headers
+    file_header->section_headers = malloc(file_header->number_of_sections * sizeof(section_header));
+    for (i = 0; i < file_header->number_of_sections; i++)
+    {
+        // READ sect_name
+        bytesRead = read(fd, &file_header->section_headers[i].sect_name, 7);
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
+            free(file_header);
+            return;
+        }
+        // READ sect_type
+        bytesRead = read(fd, &file_header->section_headers[i].sect_type, sizeof(file_header->section_headers->sect_type));
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
+            free(file_header);
+            return;
+        }
+        else
+        {
+            if (is_valid_section_type(file_header->section_headers[i].sect_type) != 1)
+            {
+                printf("ERROR\ninvalid file\n");
+                free(file_header->section_headers);
+                free(file_header);
+                return;
+            }
+        }
+        // READ sect_offset
+        bytesRead = read(fd, &file_header->section_headers[i].sect_offset, sizeof(file_header->section_headers->sect_offset));
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
+            free(file_header);
+            return;
+        }
+        // READ sect_size
+        bytesRead = read(fd, &file_header->section_headers[i].sect_size, sizeof(file_header->section_headers->sect_size));
+        if (bytesRead < 0)
+        {
+            printf("ERROR\nCouldn't read from the file\n");
+            free(file_header->section_headers);
+            free(file_header);
+            return;
+        }
+    }
+
+    if (file_header->number_of_sections < sect_nr)
+    {
+        printf("ERROR\ninvalid section\n");
+        free(file_header->section_headers);
+        free(file_header);
+        return;
+    }
+    char *buffer = malloc(file_header->section_headers[sect_nr - 1].sect_size * sizeof(char));
+    lseek(fd, 0, SEEK_SET);
+    lseek(fd, file_header->section_headers[sect_nr - 1].sect_offset, SEEK_SET);
+
+    bytesRead = read(fd, buffer, file_header->section_headers[sect_nr - 1].sect_size);
+    if (bytesRead < 0)
+    {
+        printf("ERROR\nCouldn't read from the file\n");
+        free(buffer);
+        free(file_header->section_headers);
+        free(file_header);
+        return;
+    }
+
+    int nr_lines = 1, valid = 0;
+    char *token;
+    const char s[2] = "\n";
+    token = strtok(buffer, s);
+
+    while (token != NULL)
+    {
+        if (nr_lines == line_nr)
+        {
+            printf("SUCCESS\n");
+            printf("%s\n", token);
+            valid = 1;
+        }
+        nr_lines++;
+        token = strtok(NULL, s);
+    }
+    if (valid == 0)
+        printf("ERROR\ninvalid line\n");
+
+    free(buffer);
+    free(file_header->section_headers);
+    free(file_header);
+}
+int check_SF_15(char *file_path)
+{
+    int fd, i, bytesRead;
+    header *file_header = malloc(sizeof(header));
+    fd = open(file_path, O_RDONLY);
+    if (fd < 0)
+    {
+        close(fd);
+        free(file_header);
+        return 0;
+    }
+    // READ magic
+    bytesRead = read(fd, &file_header->magic, sizeof(file_header->magic));
+    if (bytesRead < 0)
+    {
+        close(fd);
+        free(file_header);
+        return 0;
+    }
+    else
+    {
+        if (strcmp(file_header->magic, "JUoc") != 0)
+        {
+            close(fd);
+            free(file_header);
+            return 0;
+        }
+    }
+    // READ header_size
+    bytesRead = read(fd, &file_header->header_size, sizeof(file_header->header_size));
+    if (bytesRead < 0)
+    {
+        close(fd);
+        free(file_header);
+        return 0;
+    }
+    // READ version
+    bytesRead = read(fd, &file_header->version, sizeof(file_header->version));
+    if (bytesRead < 0)
+    {
+        close(fd);
+        free(file_header);
+        return 0;
+    }
+    else
+    {
+        if (file_header->version < 82 || file_header->version > 172)
+        {
+            close(fd);
+            free(file_header);
+            return 0;
+        }
+    }
+
+    // READ number_of_sections
+    bytesRead = read(fd, &file_header->number_of_sections, sizeof(file_header->number_of_sections));
+
+    if (bytesRead < 0)
+    {
+        close(fd);
+        free(file_header);
+        return 0;
+    }
+    else
+    {
+        if (!(file_header->number_of_sections >= 8 && file_header->number_of_sections <= 10))
+        {
+            close(fd);
+            free(file_header);
+            return 0;
+        }
+    }
+    // READ sections headers
+    file_header->section_headers = malloc(file_header->number_of_sections * sizeof(section_header));
+
+    for (i = 0; i < file_header->number_of_sections; i++)
+    {
+        // READ sect_name
+        bytesRead = read(fd, &file_header->section_headers[i].sect_name, 7);
+        if (bytesRead < 0)
+        {
+            close(fd);
+            free(file_header->section_headers);
+            free(file_header);
+            return 0;
+        }
+        // READ sect_type
+        bytesRead = read(fd, &file_header->section_headers[i].sect_type, sizeof(file_header->section_headers->sect_type));
+        if (bytesRead < 0)
+        {
+            close(fd);
+            free(file_header->section_headers);
+            free(file_header);
+            return 0;
+        }
+        else
+        {
+            if (is_valid_section_type(file_header->section_headers[i].sect_type) != 1)
+            {
+                close(fd);
+                free(file_header->section_headers);
+                free(file_header);
+                return 0;
+            }
+        }
+        // READ sect_offset
+        bytesRead = read(fd, &file_header->section_headers[i].sect_offset, sizeof(file_header->section_headers->sect_offset));
+        if (bytesRead < 0)
+        {
+            close(fd);
+            free(file_header->section_headers);
+            free(file_header);
+            return 0;
+        }
+        // READ sect_size
+        bytesRead = read(fd, &file_header->section_headers[i].sect_size, sizeof(file_header->section_headers->sect_size));
+        if (bytesRead < 0)
+        {
+            close(fd);
+            free(file_header->section_headers);
+            free(file_header);
+            return 0;
+        }
+    }
+    for (int i = 0; i < file_header->number_of_sections; i++)
+    {
+        char *buffer = malloc(file_header->section_headers[i].sect_size * sizeof(char));
+        lseek(fd, 0, SEEK_SET);
+        lseek(fd, file_header->section_headers[i].sect_offset, SEEK_SET);
+
+        bytesRead = read(fd, buffer, file_header->section_headers[i].sect_size);
+        if (bytesRead < 0)
+        {
+            close(fd);
+            free(buffer);
+            free(file_header->section_headers);
+            free(file_header);
+            return 0;
+        }
+
+        int nr_lines = 1;
+        char *token;
+        const char s[2] = "\n";
+        token = strtok(buffer, s);
+
+        while (token != NULL)
+        {
+            nr_lines++;
+            token = strtok(NULL, s);
+        }
+        if (nr_lines > 15)
+        {
+            free(file_header->section_headers);
+            free(file_header);
+            free(buffer);
+            close(fd);
+            return 1;
+        }
+        free(buffer);
+    }
+    close(fd);
+    free(file_header->section_headers);
+    free(file_header);
+    return 0;
+}
+void list_directory_rec_SF(char *dirName, char *prefix)
+{
+    DIR *dir;
+    struct dirent *dirEntry;
+    char *path = malloc(MAX_PATH_LEN * sizeof(char));
+    dir = opendir(dirName);
+    if (dir == 0)
+    {
+        printf("%s", "ERROR\nerror opening directory\n");
+        exit(4);
+    }
+
+    // iterate the directory contents
+    while ((dirEntry = readdir(dir)) != 0)
+    {
+        // build the complete path to the element in the directory
+        if (strcmp(dirEntry->d_name, ".") != 0 && strcmp(dirEntry->d_name, "..") != 0)
+        {
+            strcpy(path, dirName);
+            strcat(path, "/");
+            strcat(path, dirEntry->d_name);
+
+            if (check_directory(path) == 1)
+            {
+                char *new_prefix = malloc(MAX_PATH_LEN * sizeof(char));
+                strcpy(new_prefix, prefix);
+                strcat(new_prefix, dirEntry->d_name);
+                strcat(new_prefix, "/");
+                list_directory_rec_SF(path, new_prefix);
+                free(new_prefix);
+            }
+            else
+            {
+                if(check_SF_15(path))
+                printf("%s\n", path);
+            }
+        }
+    }
+    free(path);
+    closedir(dir);
 }
 
 int main(int argc, char **argv)
@@ -747,6 +1123,34 @@ int main(int argc, char **argv)
                 strncpy(path, argv[1] + 5, strlen(argv[1]));
             }
             parse_sf_file(path);
+            free(path);
+        }
+        else if (strcmp(argv[1], "extract") == 0)
+        {
+            char *path = malloc(MAX_PATH_LEN * sizeof(char));
+            char *sect_nr = malloc(MAX_PATH_LEN * sizeof(char));
+            char *line_nr = malloc(MAX_PATH_LEN * sizeof(char));
+
+            strncpy(path, argv[2] + 5, strlen(argv[2]));
+            strncpy(sect_nr, argv[3] + 8, strlen(argv[3]));
+            strncpy(line_nr, argv[4] + 5, strlen(argv[4]));
+
+            extract(path, atoi(sect_nr), atoi(line_nr));
+
+            free(path);
+            free(sect_nr);
+            free(line_nr);
+        }
+        else if (strcmp(argv[1], "findall") == 0)
+        {
+            char *path = malloc(MAX_PATH_LEN * sizeof(char));
+            strncpy(path, argv[2] + 5, strlen(argv[2]));
+
+            char *prefix = "";
+            printf("%s", "SUCCESS\n");
+            list_directory_rec_SF(path, prefix);
+    
+
             free(path);
         }
     }
