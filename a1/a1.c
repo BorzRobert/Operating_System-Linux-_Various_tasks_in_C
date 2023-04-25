@@ -21,7 +21,7 @@ typedef struct
 
 typedef struct
 {
-    char magic[4];
+    char magic[5];
     short header_size;
     unsigned char version;
     unsigned char number_of_sections;
@@ -39,7 +39,6 @@ int string_ends_with(const char *str, const char *suffix)
 
 int check_path(char *dirName)
 {
-    // Check if realy a directory
     struct stat fileMetadata;
     if (stat(dirName, &fileMetadata) < 0)
     {
@@ -140,7 +139,6 @@ void list_directory_filtered_perm(char *dirName, char *filter)
             strcpy(path, dirName);
             strcat(path, "/");
             strcat(path, dirEntry->d_name);
-            // printf("%s\n",path);
 
             if (stat(path, &fileMetadata) < 0)
             { // get info about a file system element (file, directory etc.)
@@ -407,7 +405,7 @@ void parse_sf_file(char *file_path)
         return;
     }
     // READ magic
-    bytesRead = read(fd, &file_header->magic, sizeof(file_header->magic));
+    bytesRead = read(fd, &file_header->magic, 4);
     if (bytesRead < 0)
     {
         printf("ERROR\nCouldn't read from the file\n");
@@ -416,6 +414,7 @@ void parse_sf_file(char *file_path)
     }
     else
     {
+        file_header->magic[4]='\0';
         if (strcmp(file_header->magic, "JUoc") != 0)
         {
             printf("ERROR\nwrong magic\n");
@@ -543,7 +542,7 @@ void extract(char *file_path, int sect_nr, int line_nr)
         return;
     }
     // READ magic
-    bytesRead = read(fd, &file_header->magic, sizeof(file_header->magic));
+    bytesRead = read(fd, &file_header->magic, 4);
     if (bytesRead < 0)
     {
         printf("ERROR\nCouldn't read from the file\n");
@@ -552,6 +551,7 @@ void extract(char *file_path, int sect_nr, int line_nr)
     }
     else
     {
+        file_header->magic[4]='\0';
         if (strcmp(file_header->magic, "JUoc") != 0)
         {
             printf("ERROR\ninvalid file\n");
@@ -710,7 +710,7 @@ int check_SF_15(char *file_path)
         return 0;
     }
     // READ magic
-    bytesRead = read(fd, &file_header->magic, sizeof(file_header->magic));
+    bytesRead = read(fd, &file_header->magic, 4);
     if (bytesRead < 0)
     {
         close(fd);
@@ -719,7 +719,8 @@ int check_SF_15(char *file_path)
     }
     else
     {
-        if (file_header->magic[0] != 'J' && file_header->magic[1] != 'U' && file_header->magic[2] != 'o' && file_header->magic[3] != 'c')
+        file_header->magic[4]='\0';
+        if (strcmp(file_header->magic,"JUoc")!=0)
         {
             close(fd);
             free(file_header);
@@ -848,7 +849,7 @@ int check_SF_15(char *file_path)
             nr_lines++;
             token = strtok(NULL, s);
         }
-        if (nr_lines >= 15)
+        if (nr_lines > 15)
         {
             free(file_header->section_headers);
             free(file_header);
