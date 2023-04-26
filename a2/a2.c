@@ -3,7 +3,15 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include "a2_helper.h"
+
+#define NUM_THREADS 46
+#define MAX_THREADS_RUNNING 6
+
+sem_t semaphore;
+int running_threads = 0;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void *thread_function_P5(void *arg)
 {
@@ -17,10 +25,42 @@ void *thread_function_P5_four(void *arg)
     info(BEGIN, 5, *((int *)arg));
     return 0;
 }
+void *thread_function_P8(void *arg)
+{
+    info(BEGIN, 8, *((int *)arg));
+    pthread_mutex_lock(&mutex);
+    running_threads++;
+    pthread_mutex_unlock(&mutex);
+    // printf("Asta face T5.%i\n", *((int *)arg));
+    pthread_mutex_lock(&mutex);
+    running_threads--;
+    pthread_mutex_unlock(&mutex);
+    info(END, 8, *((int *)arg));
+    sem_post(&semaphore);
+    return 0;
+}
+void *T15_function(void *arg)
+{
+    info(BEGIN, 8, *((int *)arg));
+    pthread_mutex_lock(&mutex);
+    running_threads++;
+    pthread_mutex_unlock(&mutex);
+    /*while (running_threads<MAX_THREADS_RUNNING)
+    {
+        //printf("%i\n",running_threads);
+        //wait
+    }*/
+    pthread_mutex_lock(&mutex);
+    running_threads--;
+    pthread_mutex_unlock(&mutex);
+    info(END, 8, *((int *)arg));
+    sem_post(&semaphore);
+    return 0;
+}
 int main()
 {
     int pid;
-
+    sem_init(&semaphore, 0, MAX_THREADS_RUNNING);
     init();
     info(BEGIN, 1, 0);
     // printf("asta face P1 initial\n");
@@ -67,21 +107,21 @@ int main()
                                 printf("Error creating P5.3\n");
                             else
                             {
-                                // printf("Am creat threadul P5.2 si l-am si inchis\n");
+                                // printf("Am creat threadul P5.3 si l-am si inchis\n");
                                 pthread_join(thread3, NULL);
                             }
                             if (pthread_create(&thread5, NULL, thread_function_P5, (void *)&five) != 0)
                                 printf("Error creating P5.5\n");
                             else
                             {
-                                // printf("Am creat threadul P5.2 si l-am si inchis\n");
+                                // printf("Am creat threadul P5.5 si l-am si inchis\n");
                                 pthread_join(thread5, NULL);
                             }
                             pthread_create(&thread4, NULL, thread_function_P5_four, (void *)&four);
                             pthread_create(&thread2, NULL, thread_function_P5, (void *)&two);
                             pthread_join(thread2, NULL);
                             pthread_join(thread4, NULL);
-                            info(END,5,4);
+                            info(END, 5, 4);
 
                             info(END, 5, 0);
                         }
@@ -130,6 +170,29 @@ int main()
                                                 if (pid6 == 0) // child process(P8)
                                                 {
                                                     info(BEGIN, 8, 0);
+                                                    int threadId[NUM_THREADS];
+                                                    for (int i = 0; i < 46; i++)
+                                                        threadId[i] = i + 1;
+                                                    pthread_t threads[NUM_THREADS];
+                                                    sem_wait(&semaphore);
+                                                    pthread_create(&threads[14], NULL, T15_function, (void *)&threadId[14]);
+                                                    for (int i = 0; i < 46; i++)
+                                                    {
+                                                        sem_wait(&semaphore);
+                                                        if(i!=14)
+                                                        pthread_create(&threads[i], NULL, thread_function_P8, (void *)&threadId[i]);
+                                                    }
+                                                    for (int i = 0; i < NUM_THREADS; i++)
+                                                    {
+                                                        if(i!=14)
+                                                        pthread_join(threads[i], NULL);
+                                                    }
+                                                    pthread_join(threads[14], NULL);
+                                                    //TODO calculate the number of threads that are runnig
+                                                    //in a correct manner
+                                                    // destroy semaphore
+                                                    sem_destroy(&semaphore);
+
                                                     // printf("Asta face P8\n");
                                                     info(END, 8, 0);
                                                 }
