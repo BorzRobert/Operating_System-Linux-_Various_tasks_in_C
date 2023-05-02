@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -47,7 +48,7 @@ void *T15_function(void *arg)
     pthread_mutex_unlock(&mutex);
     /*while (running_threads<MAX_THREADS_RUNNING)
     {
-        //printf("%i\n",running_threads);
+        printf("%i\n",running_threads);
         //wait
     }*/
     pthread_mutex_lock(&mutex);
@@ -58,6 +59,199 @@ void *T15_function(void *arg)
     return 0;
 }
 int main()
+{
+    int pid;
+    sem_init(&semaphore, 0, MAX_THREADS_RUNNING);
+    init();
+    info(BEGIN, 1, 0);
+    // printf("asta face P1 initial\n");
+    pid = fork();
+    switch (pid)
+    {
+    case -1:
+        printf("Error creating child process!\n");
+        //exit(1);
+        break;
+    case 0: // child process(P2)
+        int pid1, pid2;
+        info(BEGIN, 2, 0);
+        // printf("Asta face P2 initial\n");
+        pid1 = fork();
+        switch (pid1)
+        {
+        case -1:
+            printf("Error creating child process!\n");
+            //exit(1);
+            break;
+        case 0: // child process(P3)
+            int pid3, pid4, pid5, pid6;
+            info(BEGIN, 3, 0);
+            // printf("Asta face P3 initial\n");
+            pid3 = fork();
+            switch (pid3)
+            {
+            case -1:
+                printf("Error creating child process!\n");
+                //exit(1);
+                break;
+            case 0: // child process(P5)
+                info(BEGIN, 5, 0);
+                // printf("Asta face P5\n");
+                pthread_t thread1, thread2, thread3, thread4, thread5;
+                int one = 1, two = 2, three = 3, four = 4, five = 5;
+                if (pthread_create(&thread1, NULL, thread_function_P5, (void *)&one) != 0)
+                    printf("Error creating P5.1\n");
+                else
+                {
+                    // printf("Am creat threadul P5.1 si l-am si inchis\n");
+                    pthread_join(thread1, NULL);
+                }
+                if (pthread_create(&thread3, NULL, thread_function_P5, (void *)&three) != 0)
+                    printf("Error creating P5.3\n");
+                else
+                {
+                    // printf("Am creat threadul P5.3 si l-am si inchis\n");
+                    pthread_join(thread3, NULL);
+                }
+                if (pthread_create(&thread5, NULL, thread_function_P5, (void *)&five) != 0)
+                    printf("Error creating P5.5\n");
+                else
+                {
+                    // printf("Am creat threadul P5.5 si l-am si inchis\n");
+                    pthread_join(thread5, NULL);
+                }
+                pthread_create(&thread4, NULL, thread_function_P5_four, (void *)&four);
+                pthread_create(&thread2, NULL, thread_function_P5, (void *)&two);
+                pthread_join(thread2, NULL);
+                pthread_join(thread4, NULL);
+                info(END, 5, 4);
+
+                info(END, 5, 0);
+                break;
+
+            default:
+                int status;
+                wait(&status);
+                // printf("asta face P3 dupa ce P5 se termina\n");
+                pid4 = fork();
+                switch (pid4)
+                {
+                case -1:
+                    printf("Error creating child process!\n");
+                    //exit(1);
+                    break;
+                case 0: // child process(P6)
+                    info(BEGIN, 6, 0);
+                    // printf("Asta face P6\n");
+                    info(END, 6, 0);
+                    break;
+                default:
+                    int status;
+                    wait(&status);
+                    // printf("asta P3 dupa ce P6 se termina\n");
+                    pid5 = fork();
+                    switch (pid5)
+                    {
+                    case -1:
+                        printf("Error creating child process!\n");
+                        //exit(1);
+                        break;
+                    case 0: // child process(P7)
+                        info(BEGIN, 7, 0);
+                        // printf("Asta face P7\n");
+                        info(END, 7, 0);
+                        break;
+
+                    default:
+                        int status;
+                        wait(&status);
+                        // printf("asta P3 dupa ce P7 se termina\n");
+                        pid6 = fork();
+                        switch (pid6)
+                        {
+                        case -1:
+                            printf("Error creating child process!\n");
+                            //exit(1);
+                            break;
+                        case 0: // child process(P8)
+                            info(BEGIN, 8, 0);
+                            int threadId[NUM_THREADS];
+                            for (int i = 0; i < 46; i++)
+                                threadId[i] = i + 1;
+                            pthread_t threads[NUM_THREADS];
+                            sem_wait(&semaphore);
+                            for (int i = 0; i < 46; i++)
+                            {
+                                sem_wait(&semaphore);
+                                pthread_create(&threads[i], NULL, thread_function_P8, (void *)&threadId[i]);
+                            }
+                            for (int i = 0; i < NUM_THREADS; i++)
+                            {
+                                pthread_join(threads[i], NULL);
+                            }
+                            // TODO calculate the number of threads that are runnig
+                            // in a correct manner
+                            //  destroy semaphore
+                            sem_destroy(&semaphore);
+
+                            // printf("Asta face P8\n");
+                            info(END, 8, 0);
+                            break;
+
+                        default:
+                            int status;
+                            wait(&status);
+                            // printf("asta P3 dupa ce P8 se termina\n");
+                            info(END, 3, 0);
+                            break;
+                        }
+                        break;
+                    }
+
+                    break;
+                }
+                break;
+            }
+            break;
+
+        default:
+            int status;
+            wait(&status);
+            // printf("asta face P2 dupa ce P3 se termina\n");
+
+            pid2 = fork();
+            switch (pid2)
+            {
+            case -1:
+                printf("Error creating child process!\n");
+                //exit(1);
+                break;
+            case 0://child process(P4)
+                info(BEGIN, 4, 0);
+                // printf("Asta face P4\n");
+                info(END, 4, 0);
+                break;
+
+            default:
+                int status;
+                wait(&status);
+                // printf("asta P2 dupa ce P4 se termina\n");
+                info(END, 2, 0);
+                break;
+            }
+            break;
+        }
+        break;
+
+    default:
+        int status;
+        wait(&status);
+        // printf("asta P1 dupa ce P2 se termina\n");
+        info(END, 1, 0);
+        break;
+    }
+}
+/*int main()
 {
     int pid;
     sem_init(&semaphore, 0, MAX_THREADS_RUNNING);
@@ -129,7 +323,7 @@ int main()
                         {
                             int status;
                             wait(&status);
-                            // printf("asta P3 dupa ce P5 se termina\n");
+                            // printf("asta face P3 dupa ce P5 se termina\n");
                             pid4 = fork();
                             if (pid4 == -1)
                                 printf("Error creating child process!\n");
@@ -175,22 +369,18 @@ int main()
                                                         threadId[i] = i + 1;
                                                     pthread_t threads[NUM_THREADS];
                                                     sem_wait(&semaphore);
-                                                    pthread_create(&threads[14], NULL, T15_function, (void *)&threadId[14]);
                                                     for (int i = 0; i < 46; i++)
                                                     {
                                                         sem_wait(&semaphore);
-                                                        if(i!=14)
                                                         pthread_create(&threads[i], NULL, thread_function_P8, (void *)&threadId[i]);
                                                     }
                                                     for (int i = 0; i < NUM_THREADS; i++)
                                                     {
-                                                        if(i!=14)
                                                         pthread_join(threads[i], NULL);
                                                     }
-                                                    pthread_join(threads[14], NULL);
-                                                    //TODO calculate the number of threads that are runnig
-                                                    //in a correct manner
-                                                    // destroy semaphore
+                                                    // TODO calculate the number of threads that are runnig
+                                                    // in a correct manner
+                                                    //  destroy semaphore
                                                     sem_destroy(&semaphore);
 
                                                     // printf("Asta face P8\n");
@@ -250,3 +440,4 @@ int main()
 
     return 0;
 }
+*/
