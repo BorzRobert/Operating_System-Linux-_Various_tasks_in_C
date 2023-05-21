@@ -49,14 +49,17 @@ int main()
       }
       printf("SUCCESS\n");
 
+      int shm_fd, fd, len;
+      unsigned int mem_reg_size;
+      char *shared_char = NULL;
+      char *shared_char_file = NULL;
+      char request[MAX_BUFFER_SIZE];
+      unsigned char byte;
+      ssize_t bytes_read;
+      struct stat sb;
+
       while (1)
       {
-            int shm_fd;
-            unsigned int mem_reg_size;
-            char *shared_char = NULL;
-            char *request = malloc(MAX_BUFFER_SIZE * sizeof(char));
-            unsigned char byte;
-            ssize_t bytes_read;
             i = 0;
             // Take first string value of the command and then read command's parameters
             while ((bytes_read = read(reqPipefd, &byte, sizeof(byte))) > 0 && byte != '#')
@@ -171,9 +174,18 @@ int main()
             }
             else if (strcmp(request, "WRITE_TO_SHM") == 0) // Write to shm request
             {
-
-                  unsigned int offset = 0, value = 0;
-
+                  unsigned int offset, value;
+                  strcpy(message, "WRITE_TO_SHM#");
+                  bytesWritten = write(respPipefd, message, strlen(message));
+                  if (bytesWritten < 0)
+                  {
+                        printf("ERROR\nwritting in the response pipe\n");
+                        close(reqPipefd);
+                        close(respPipefd);
+                        unlink(respPipeName);
+                        unlink(reqPipeName);
+                        exit(1);
+                  }
                   bytes_read = read(reqPipefd, &offset, sizeof(offset));
                   if (bytes_read < 0)
                   {
@@ -195,9 +207,9 @@ int main()
                         exit(1);
                   }
 
-                  if (offset < 0 || offset + sizeof(value) > 2434226)
+                  if (offset > 2434223 || offset < 0)
                   {
-                        strcpy(message, "WRITE_TO_SHM#ERROR#");
+                        strcpy(message, "ERROR#");
                         bytesWritten = write(respPipefd, message, strlen(message));
                         if (bytesWritten < 0)
                         {
@@ -211,8 +223,8 @@ int main()
                   }
                   else
                   {
-                        memcpy(shared_char + offset, &value, sizeof(value));
-                        strcpy(message, "WRITE_TO_SHM#SUCCESS#");
+
+                        strcpy(message, "SUCCESS#");
                         bytesWritten = write(respPipefd, message, strlen(message));
                         if (bytesWritten < 0)
                         {
@@ -223,9 +235,180 @@ int main()
                               unlink(reqPipeName);
                               exit(1);
                         }
+                        memcpy(shared_char + offset, &value, 4);
                   }
             }
-            break;
+            else if (strcmp(request, "MAP_FILE") == 0) // Map file request
+            {
+                  strcpy(message, "MAP_FILE#");
+                  bytesWritten = write(respPipefd, message, strlen(message));
+                  if (bytesWritten < 0)
+                  {
+                        printf("ERROR\nwritting in the response pipe\n");
+                        close(reqPipefd);
+                        close(respPipefd);
+                        unlink(respPipeName);
+                        unlink(reqPipeName);
+                        exit(1);
+                  }
+                  i = 0;
+                  while ((bytes_read = read(reqPipefd, &byte, sizeof(byte))) > 0 && byte != '#')
+                  {
+                        request[i] = byte;
+                        i++;
+                  }
+                  request[i] = '\0';
+                  fd = open(request, O_RDWR);
+                  if (fd < 0)
+                  {
+                        printf("ERROR\ncould not open file\n");
+                        strcpy(message, "ERROR#");
+                        bytesWritten = write(respPipefd, message, strlen(message));
+                        if (bytesWritten < 0)
+                        {
+                              printf("ERROR\nwritting in the response pipe\n");
+                              close(reqPipefd);
+                              close(respPipefd);
+                              unlink(respPipeName);
+                              unlink(reqPipeName);
+                              exit(1);
+                        }
+                        close(reqPipefd);
+                        close(respPipefd);
+                        unlink(respPipeName);
+                        unlink(reqPipeName);
+                        exit(1);
+                  }
+                  else
+                  {
+                        if (fstat(fd, &sb) == -1)
+                        {
+                              printf("ERROR\ncould not get file size\n");
+                              strcpy(message, "ERROR#");
+                              bytesWritten = write(respPipefd, message, strlen(message));
+                              if (bytesWritten < 0)
+                              {
+                                    printf("ERROR\nwritting in the response pipe\n");
+                                    close(reqPipefd);
+                                    close(respPipefd);
+                                    unlink(respPipeName);
+                                    unlink(reqPipeName);
+                                    exit(1);
+                              }
+                              close(reqPipefd);
+                              close(respPipefd);
+                              unlink(respPipeName);
+                              unlink(reqPipeName);
+                              exit(1);
+                        }
+                        len = sb.st_size;
+                        shared_char_file = (char *)mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                        if (shared_char_file == MAP_FAILED)
+                        {
+                              printf("Could not map the file");
+                              strcpy(message, "ERROR#");
+                              bytesWritten = write(respPipefd, message, strlen(message));
+                              if (bytesWritten < 0)
+                              {
+                                    printf("ERROR\nwritting in the response pipe\n");
+                                    close(reqPipefd);
+                                    close(respPipefd);
+                                    unlink(respPipeName);
+                                    unlink(reqPipeName);
+                                    exit(1);
+                              }
+                              exit(1);
+                        }
+                        else
+                        {
+                              strcpy(message, "SUCCESS#");
+                              bytesWritten = write(respPipefd, message, strlen(message));
+                              if (bytesWritten < 0)
+                              {
+                                    printf("ERROR\nwritting in the response pipe\n");
+                                    close(reqPipefd);
+                                    close(respPipefd);
+                                    unlink(respPipeName);
+                                    unlink(reqPipeName);
+                                    exit(1);
+                              }
+                        }
+                  }
+            }
+            else if (strcmp(request, "READ_FROM_FILE_OFFSET") == 0)
+            {
+                  unsigned int offset, no_of_bytes;
+                  strcpy(message, "READ_FROM_FILE_OFFSET#");
+                  bytesWritten = write(respPipefd, message, strlen(message));
+                  if (bytesWritten < 0)
+                  {
+                        printf("ERROR\nwritting in the response pipe\n");
+                        close(reqPipefd);
+                        close(respPipefd);
+                        unlink(respPipeName);
+                        unlink(reqPipeName);
+                        exit(1);
+                  }
+                  bytes_read = read(reqPipefd, &offset, sizeof(offset));
+                  if (bytes_read < 0)
+                  {
+                        printf("ERROR\nreading from the request pipe\n");
+                        close(reqPipefd);
+                        close(respPipefd);
+                        unlink(respPipeName);
+                        unlink(reqPipeName);
+                        exit(1);
+                  }
+                  bytes_read = read(reqPipefd, &no_of_bytes, sizeof(no_of_bytes));
+                  if (bytes_read < 0)
+                  {
+                        printf("ERROR\nreading from the request pipe\n");
+                        close(reqPipefd);
+                        close(respPipefd);
+                        unlink(respPipeName);
+                        unlink(reqPipeName);
+                        exit(1);
+                  }
+                  if (offset + no_of_bytes > len)
+                  {
+                        strcpy(message, "ERROR#");
+                        bytesWritten = write(respPipefd, message, strlen(message));
+                        if (bytesWritten < 0)
+                        {
+                              printf("ERROR\nwritting in the response pipe\n");
+                              close(reqPipefd);
+                              close(respPipefd);
+                              unlink(respPipeName);
+                              unlink(reqPipeName);
+                              exit(1);
+                        }
+                        close(reqPipefd);
+                        close(respPipefd);
+                        unlink(respPipeName);
+                        unlink(reqPipeName);
+                        exit(1);
+                  }
+                  else
+                  {
+                        //char *read_addr = shared_char_file + offset;
+                        //char *buffer = malloc(MAX_BUFFER_SIZE * sizeof(char));
+                        //for (int i = 0; i < no_of_bytes; i++)
+                              //buffer[i] = read_addr[i];
+                        //memcpy(shared_char, buffer, no_of_bytes);
+                        strcpy(message, "SUCCESS#");
+                        bytesWritten = write(respPipefd, message, strlen(message));
+                        if (bytesWritten < 0)
+                        {
+                              printf("ERROR\nwritting in the response pipe\n");
+                              close(reqPipefd);
+                              close(respPipefd);
+                              unlink(respPipeName);
+                              unlink(reqPipeName);
+                              exit(1);
+                        }
+                        //free(buffer);
+                  }
+            }
       }
       free(message);
       return 0;

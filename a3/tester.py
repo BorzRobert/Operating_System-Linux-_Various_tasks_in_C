@@ -338,6 +338,7 @@ class Tester(threading.Thread):
         self.writeNumber(fsize//2)
         self.writeNumber(50)
         r = self.readString()
+        print(r)
         if r != "READ_FROM_FILE_OFFSET":
             return score
         r = self.readString()
