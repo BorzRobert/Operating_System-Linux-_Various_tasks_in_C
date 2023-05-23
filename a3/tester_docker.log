@@ -1,3 +1,20 @@
+programul meu merge
+SUCCESS
+programul meu merge
+SUCCESS
+programul meu merge
+SUCCESS
+programul meu merge
+SUCCESS
+ERROR
+could not open file
+programul meu merge
+SUCCESS
+programul meu merge
+SUCCESS
+programul meu merge
+SUCCESS
+programul meu merge
 [1;35mTesting ping...[0m
 [TESTER] received string 'START'
 [TESTER] sending string 'VARIANT'
@@ -66,9 +83,10 @@ Test score: 5 / 5
 [TESTER] sending string 'READ_FROM_FILE_OFFSET'
 [TESTER] sending number 27558
 [TESTER] sending number 50
-None
+[TESTER] received string 'READ_FROM_FILE_OFFSET'
+[TESTER] received string 'SUCCESS'
 [TESTER] sending string 'EXIT'
-Test score: 5 / 10
+Test score: 10 / 10
 [1;35mTesting read_section...[0m
 [TESTER] received string 'START'
 [TESTER] sending string 'CREATE_SHM'
@@ -83,8 +101,16 @@ Test score: 5 / 10
 [TESTER] sending number 12
 [TESTER] sending number 0
 [TESTER] sending number 100
-	[1;31mTIME LIMIT EXCEEDED[0m
-Test score: 0 / 10
+[TESTER] received string 'READ_FROM_FILE_SECTION'
+[TESTER] received string 'ERROR'
+[TESTER] sending string 'READ_FROM_FILE_SECTION'
+[TESTER] sending number 4
+[TESTER] sending number 149
+[TESTER] sending number 1465
+[TESTER] received string 'READ_FROM_FILE_SECTION'
+[TESTER] received string 'ERROR'
+[TESTER] sending string 'EXIT'
+Test score: 4 / 10
 [1;35mTesting read_logical...[0m
 [TESTER] received string 'START'
 [TESTER] sending string 'CREATE_SHM'
@@ -96,10 +122,10 @@ Test score: 0 / 10
 [TESTER] received string 'MAP_FILE'
 [TESTER] received string 'SUCCESS'
 [TESTER] sending string 'READ_FROM_LOGICAL_SPACE_OFFSET'
-[TESTER] sending number 22677
-[TESTER] sending number 1465
+[TESTER] sending number 2085
+[TESTER] sending number 2163
 	[1;31mTIME LIMIT EXCEEDED[0m
 Test score: 0 / 10
 
-Total score: 45 / 70
-Assignment grade: 64.29 / 100
+Total score: 54 / 70
+Assignment grade: 77.14 / 100
