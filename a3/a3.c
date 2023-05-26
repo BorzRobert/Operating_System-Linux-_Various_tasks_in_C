@@ -173,7 +173,7 @@ int extract(int fd, int sect_nr)
 }
 
 int main()
-{printf("programul meu merge\n");
+{
       const char *reqPipeName = "REQ_PIPE_81069";
       const char *respPipeName = "RESP_PIPE_81069";
       int respPipefd, reqPipefd, i;
@@ -204,11 +204,7 @@ int main()
       if (bytesWritten == -1)
       {
             printf("ERROR\nwritting in the response pipe\n");
-            close(reqPipefd);
-            close(respPipefd);
-            unlink(respPipeName);
-            unlink(reqPipeName);
-            exit(1);
+            return 0;
       }
       printf("SUCCESS\n");
 
@@ -234,10 +230,6 @@ int main()
 
             if (strcmp(request, "EXIT") == 0) // Exit request
             {
-                  close(reqPipefd);
-                  close(respPipefd);
-                  unlink(respPipeName);
-                  unlink(reqPipeName);
                   break;
             }
             else if (strcmp(request, "VARIANT") == 0) // Variant request
@@ -248,32 +240,20 @@ int main()
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytesWritten = write(respPipefd, &variant_number, sizeof(variant_number)); // 81069
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   strcpy(message, "VALUE#");
                   bytesWritten = write(respPipefd, message, strlen(message)); //"VALUE"
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
             }
             else if (strcmp(request, "CREATE_SHM") == 0) // Create shm request
@@ -282,11 +262,7 @@ int main()
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   shm_fd = shm_open("/nGf5ScLj", O_CREAT | O_RDWR, 0664);
                   if (shm_fd < 0)
@@ -297,11 +273,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                         exit(1);
                   }
@@ -315,11 +287,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                         exit(1);
                   }
@@ -328,11 +296,7 @@ int main()
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
             }
             else if (strcmp(request, "WRITE_TO_SHM") == 0) // Write to shm request
@@ -343,31 +307,19 @@ int main()
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytes_read = read(reqPipefd, &offset, sizeof(offset));
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytes_read = read(reqPipefd, &value, sizeof(value));
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
 
                   if (offset > 2434223 || offset < 0)
@@ -377,11 +329,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                   }
                   else
@@ -392,11 +340,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                         memcpy(shared_char + offset, &value, 4);
                   }
@@ -408,11 +352,7 @@ int main()
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   i = 0;
                   while ((bytes_read = read(reqPipefd, &byte, sizeof(byte))) > 0 && byte != '#')
@@ -430,17 +370,9 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   else
                   {
@@ -452,17 +384,9 @@ int main()
                               if (bytesWritten < 0)
                               {
                                     printf("ERROR\nwritting in the response pipe\n");
-                                    close(reqPipefd);
-                                    close(respPipefd);
-                                    unlink(respPipeName);
-                                    unlink(reqPipeName);
-                                    exit(1);
+                                    break;
                               }
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                         len = sb.st_size;
                         shared_char_file = (char *)mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -474,13 +398,9 @@ int main()
                               if (bytesWritten < 0)
                               {
                                     printf("ERROR\nwritting in the response pipe\n");
-                                    close(reqPipefd);
-                                    close(respPipefd);
-                                    unlink(respPipeName);
-                                    unlink(reqPipeName);
-                                    exit(1);
+                                    break;
                               }
-                              exit(1);
+                              break;
                         }
                         else
                         {
@@ -489,11 +409,7 @@ int main()
                               if (bytesWritten < 0)
                               {
                                     printf("ERROR\nwritting in the response pipe\n");
-                                    close(reqPipefd);
-                                    close(respPipefd);
-                                    unlink(respPipeName);
-                                    unlink(reqPipeName);
-                                    exit(1);
+                                    break;
                               }
                         }
                   }
@@ -506,31 +422,19 @@ int main()
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytes_read = read(reqPipefd, &offset, sizeof(offset));
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytes_read = read(reqPipefd, &no_of_bytes, sizeof(no_of_bytes));
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   if (offset + no_of_bytes > len)
                   {
@@ -539,11 +443,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                   }
                   else
@@ -553,11 +453,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                         char *read_addr = shared_char_file + offset;
                         char *buffer = malloc(MAX_BUFFER_SIZE * sizeof(char));
@@ -567,7 +463,7 @@ int main()
                         free(buffer);
                   }
             }
-            else if (strcmp(request, "READ_FROM_FILE_SECTION")==0) // Read from file section request
+            else if (strcmp(request, "READ_FROM_FILE_SECTION") == 0) // Read from file section request
             {
                   unsigned int section_no, offset, no_of_bytes;
                   strcpy(message, "READ_FROM_FILE_SECTION#");
@@ -575,41 +471,25 @@ int main()
                   if (bytesWritten < 0)
                   {
                         printf("ERROR\nwritting in the response pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytes_read = read(reqPipefd, &section_no, sizeof(section_no));
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytes_read = read(reqPipefd, &offset, sizeof(offset));
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   bytes_read = read(reqPipefd, &no_of_bytes, sizeof(no_of_bytes));
                   if (bytes_read < 0)
                   {
                         printf("ERROR\nreading from the request pipe\n");
-                        close(reqPipefd);
-                        close(respPipefd);
-                        unlink(respPipeName);
-                        unlink(reqPipeName);
-                        exit(1);
+                        break;
                   }
                   if (section_no < 8 || section_no > 10)
                   {
@@ -618,11 +498,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                   }
                   else
@@ -632,11 +508,7 @@ int main()
                         if (bytesWritten < 0)
                         {
                               printf("ERROR\nwritting in the response pipe\n");
-                              close(reqPipefd);
-                              close(respPipefd);
-                              unlink(respPipeName);
-                              unlink(reqPipeName);
-                              exit(1);
+                              break;
                         }
                         int sf_offset;
                         if (extract(fd, section_no) != -1)
@@ -644,7 +516,7 @@ int main()
                         else
                         {
                               printf("ERROR\ncouldn't find sf_offset");
-                              exit(1);
+                              break;
                         }
                         char *read_addr = shared_char_file + offset + sf_offset;
 
@@ -655,7 +527,36 @@ int main()
                         free(buffer);
                   }
             }
+            else if (strcmp(request, "READ_FROM_LOGICAL_SPACE_OFFSET") == 0) // Read from logical space offset request
+            {
+                  unsigned int logical_offset, no_of_bytes;
+                  strcpy(message, "READ_FROM_FILE_SECTION#");
+                  bytesWritten = write(respPipefd, message, strlen(message));
+                  if (bytesWritten < 0)
+                  {
+                        printf("ERROR\nwritting in the response pipe\n");
+                        break;
+                  }
+                  bytes_read = read(reqPipefd, &logical_offset, sizeof(logical_offset));
+                  if (bytes_read < 0)
+                  {
+                        printf("ERROR\nreading from the request pipe\n");
+                        break;
+                  }
+                  bytes_read = read(reqPipefd, &no_of_bytes, sizeof(no_of_bytes));
+                  if (bytes_read < 0)
+                  {
+                        printf("ERROR\nreading from the request pipe\n");
+                        break;
+                  }
+
+
+            }
       }
+      close(reqPipefd);
+      close(respPipefd);
+      unlink(respPipeName);
+      unlink(reqPipeName);
       free(message);
       return 0;
 }

@@ -1,20 +1,13 @@
-programul meu merge
 SUCCESS
-programul meu merge
 SUCCESS
-programul meu merge
 SUCCESS
-programul meu merge
 SUCCESS
 ERROR
 could not open file
-programul meu merge
 SUCCESS
-programul meu merge
 SUCCESS
-programul meu merge
 SUCCESS
-programul meu merge
+SUCCESS
 [1;35mTesting ping...[0m
 [TESTER] received string 'START'
 [TESTER] sending string 'VARIANT'
@@ -124,8 +117,9 @@ Test score: 4 / 10
 [TESTER] sending string 'READ_FROM_LOGICAL_SPACE_OFFSET'
 [TESTER] sending number 2085
 [TESTER] sending number 2163
-	[1;31mTIME LIMIT EXCEEDED[0m
-Test score: 0 / 10
+[TESTER] received string 'READ_FROM_FILE_SECTION'
+[TESTER] sending string 'EXIT'
+Test score: 2 / 10
 
-Total score: 54 / 70
-Assignment grade: 77.14 / 100
+Total score: 56 / 70
+Assignment grade: 80.00 / 100
