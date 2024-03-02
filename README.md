@@ -12,3 +12,13 @@
 4. Threads barrier
 5. Synchronizing threads from different processes
 # a3 - Inter-process Communication Mechanisms related tasks
+1. Compilation and Running
+2. Pipe-Based Connection
+3. Variant Request
+4. Request to Create a Shared Memory Region
+5. Write to Shared Memory Request
+6. Memory-Map File Request
+7. Read From File Offset Request
+8. Read From File Section Request
+9. Read From Logical Memory Space Offset Request
+10. Exit Request
